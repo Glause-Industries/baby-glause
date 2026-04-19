@@ -1424,6 +1424,7 @@ function jsonResponse(data) {
        ═══════════════════════════════════════════════════ */
 
     const ADMIN_PASSWORD = 'babyglause2026';
+    const HARDCODED_API_URL = 'https://script.google.com/macros/s/AKfycbz1midDDYxSc2Y3gXkIGHb54zcsFdAhVZe0edtUthcXZIc-w4wRMi8BG-k05jCJ8gQE/exec'; // ← Update this if you redeploy Apps Script
 
     // In-memory store (replaces browser storage for cross-environment compatibility)
     const memStore = {};
@@ -1551,12 +1552,11 @@ function jsonResponse(data) {
     }
 
     function loadApiUrl() {
-      try {
-        let url = memStore['babyglause_api_url'] || null;
-        if (url) {
-          document.getElementById('apiUrlInput').value = url;
-        }
-      } catch(e) {}
+      // Use memStore value if set, otherwise fall back to hardcoded URL
+      const url = memStore['babyglause_api_url'] || HARDCODED_API_URL;
+      if (url) {
+        document.getElementById('apiUrlInput').value = url;
+      }
     }
 
     /* ════════ SIDEBAR NAV ════════ */
@@ -1947,7 +1947,8 @@ function jsonResponse(data) {
     /* ════════ SAVE & PUBLISH ════════ */
 
     async function saveAndPublish() {
-      const url = document.getElementById('apiUrlInput').value.trim();
+      // Always prefer the input field, fall back to hardcoded URL
+      const url = (document.getElementById('apiUrlInput').value.trim()) || HARDCODED_API_URL;
 
       if (!url) {
         setStatus('error', 'Set API URL in Instructions first');
@@ -1966,34 +1967,39 @@ function jsonResponse(data) {
       };
       const eventsRaw = document.getElementById('eventsRaw').value;
 
-      const post = (action, payload) => new Promise((resolve, reject) => {
+      // Build a full GET URL with action, pass, and JSON payload
+      const buildUrl = (action, payload) => {
         const params = new URLSearchParams({
           action: action,
           pass: ADMIN_PASSWORD,
           payload: JSON.stringify(payload)
         });
-        const fullUrl = url + '?' + params.toString();
-        // Use no-cors fetch — Google redirects block normal fetch
-        // We fire and assume success if no network error
-        fetch(fullUrl, { method: 'GET', mode: 'no-cors', redirect: 'follow' })
-          .then(() => resolve({ ok: true }))
-          .catch(err => reject(err));
+        return url + '?' + params.toString();
+      };
+
+      // Use an image ping — works cross-origin, no CORS, no preflight
+      // Google Apps Script returns JSON which the image fails to load,
+      // but the request still reaches the server and executes
+      const ping = (action, payload) => new Promise((resolve) => {
+        const img = new Image();
+        const reqUrl = buildUrl(action, payload);
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(true); // error just means non-image response — that's fine
+        img.src = reqUrl;
+        // Resolve after 8 seconds max regardless
+        setTimeout(() => resolve(true), 8000);
       });
 
       try {
-        // Fire all three saves — no-cors means we can't read response,
-        // but if no network error throws, the saves went through
-        await Promise.all([
-          post('saveConfig',  { config }),
-          post('saveJournal', { entries }),
-          post('saveEvents',  { raw: eventsRaw })
-        ]);
+        // Send sequentially so Sheet writes don't race
+        await ping('saveConfig',  { config });
+        await ping('saveJournal', { entries });
+        await ping('saveEvents',  { raw: eventsRaw });
 
         unsaved = false;
         setStatus('saved', 'Saved ✓');
         saveDraft();
 
-        // Update state from DOM
         state.welcomeText = config.welcomeText;
         state.weeklyNote = config.weeklyNote;
         state.eventsRaw = eventsRaw;
