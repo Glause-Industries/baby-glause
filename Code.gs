@@ -77,8 +77,20 @@ function readAll() {
   const journalRows  = journalSheet.getDataRange().getValues();
   const journal = [];
   for (let i = 1; i < journalRows.length; i++) {
-    const [id, date, title, body] = journalRows[i];
-    if (title) journal.push({ id, date, title, body });
+    const [id, rawDate, title, body] = journalRows[i];
+    if (!title) continue;
+    // Normalize date: if Sheets returned a Date object, format as YYYY-MM-DD
+    let date = rawDate;
+    if (rawDate instanceof Date) {
+      const y = rawDate.getFullYear();
+      const m = String(rawDate.getMonth() + 1).padStart(2, '0');
+      const d = String(rawDate.getDate()).padStart(2, '0');
+      date = y + '-' + m + '-' + d;
+    } else if (typeof rawDate === 'string') {
+      // Strip any trailing time component (T...) if present
+      date = rawDate.replace(/T.*$/, '').trim();
+    }
+    journal.push({ id, date, title, body });
   }
 
   // Events raw text

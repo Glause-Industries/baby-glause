@@ -449,7 +449,7 @@
       }
       container.innerHTML = entries.map(e => `
         <div class="journal-entry">
-          <div class="journal-date">${escapeHtml(e.date)}</div>
+          <div class="journal-date">${escapeHtml((e.date || '').replace(/T.*$/, '').trim())}</div>
           <div class="journal-title">${escapeHtml(e.title)}</div>
           <div class="journal-body">${escapeHtml(e.body)}</div>
         </div>`).join('');
