@@ -3,16 +3,16 @@
  * Caches the app shell for offline access
  */
 
-const CACHE_NAME = 'baby-glause-v2';
+const CACHE_NAME = 'baby-glause-v3';
 
-// App shell — always cache these
+// App shell — always cache these (relative paths for GitHub Pages compatibility)
 const SHELL = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/apple-touch-icon.png',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png',
+  './index.html',
+  './manifest.json',
+  './apple-touch-icon.png',
+  './icons/icon-180x180.png',
+  './icons/icon-192x192.png',
+  './icons/icon-512x512.png',
   'https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300;1,9..40,400&display=swap'
 ];
 
@@ -78,7 +78,7 @@ self.addEventListener('fetch', event => {
       }).catch(() => {
         // Offline fallback for navigation
         if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
+          return caches.match('./index.html');
         }
       });
     })
