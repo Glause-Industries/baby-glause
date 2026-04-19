@@ -1967,11 +1967,12 @@ function jsonResponse(data) {
       const eventsRaw = document.getElementById('eventsRaw').value;
 
       const post = async (body) => {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
+        const params = new URLSearchParams({
+          action: body.action,
+          pass: body.password,
+          payload: JSON.stringify(body)
         });
+        const res = await fetch(url + '?' + params.toString());
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'Unknown error');
       };

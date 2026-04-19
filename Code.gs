@@ -17,13 +17,24 @@ const ADMIN_PASSWORD = 'babyglause2026'; // ← Change this!
 // ─────────────────────────────────────────
 
 function doGet(e) {
-  const action = e.parameter.action || 'read';
-  const pass   = e.parameter.pass   || '';
+  const action  = e.parameter.action  || 'read';
+  const pass    = e.parameter.pass    || '';
+  const payload = e.parameter.payload || '{}';
 
   // Public read — no auth needed
   if (action === 'read') {
     return jsonResponse(readAll());
   }
+
+  // Write actions via GET (avoids CORS preflight issues)
+  let body;
+  try { body = JSON.parse(payload); } catch { return jsonResponse({ error: 'Invalid payload' }); }
+
+  if (pass !== ADMIN_PASSWORD) return jsonResponse({ error: 'Unauthorized' });
+
+  if (action === 'saveJournal') return jsonResponse(saveJournal(body.entries));
+  if (action === 'saveEvents')  return jsonResponse(saveEvents(body.raw));
+  if (action === 'saveConfig')  return jsonResponse(saveConfig(body.config));
 
   return jsonResponse({ error: 'Unknown action' });
 }
