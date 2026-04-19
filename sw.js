@@ -3,7 +3,7 @@
  * Caches the app shell for offline access
  */
 
-const CACHE_NAME = 'baby-glause-v1';
+const CACHE_NAME = 'baby-glause-v2';
 
 // App shell — always cache these
 const SHELL = [
