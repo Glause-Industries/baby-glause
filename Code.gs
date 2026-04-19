@@ -4,7 +4,7 @@
  *
  * Sheet structure:
  *   Sheet1 "config"   → key | value
- *   Sheet2 "journal"  → id | date | title | body | order
+ *   Sheet2 "journal"  → id | date | title | body | imageData
  *   Sheet3 "events"   → raw (single cell A1 with pasted event text)
  *   Sheet4 "brief"    → key | value  (for custom brief override text)
  */
@@ -77,7 +77,7 @@ function readAll() {
   const journalRows  = journalSheet.getDataRange().getValues();
   const journal = [];
   for (let i = 1; i < journalRows.length; i++) {
-    const [id, rawDate, title, body] = journalRows[i];
+    const [id, rawDate, title, body, imageData] = journalRows[i];
     if (!title) continue;
     // Normalize date: if Sheets returned a Date object, format as YYYY-MM-DD
     let date = rawDate;
@@ -90,7 +90,7 @@ function readAll() {
       // Strip any trailing time component (T...) if present
       date = rawDate.replace(/T.*$/, '').trim();
     }
-    journal.push({ id, date, title, body });
+    journal.push({ id, date, title, body, imageData: imageData || '' });
   }
 
   // Events raw text
@@ -108,9 +108,9 @@ function saveJournal(entries) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sheet = getOrCreate(ss, 'journal');
   sheet.clearContents();
-  sheet.appendRow(['id', 'date', 'title', 'body']);
+  sheet.appendRow(['id', 'date', 'title', 'body', 'imageData']);
   entries.forEach((e, i) => {
-    sheet.appendRow([e.id || (i + 1), e.date, e.title, e.body]);
+    sheet.appendRow([e.id || (i + 1), e.date, e.title, e.body, e.imageData || '']);
   });
   return { ok: true };
 }
@@ -169,7 +169,7 @@ function jsonResponse(data) {
 function setupSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   getOrCreate(ss, 'config').appendRow(['key', 'value']);
-  getOrCreate(ss, 'journal').appendRow(['id', 'date', 'title', 'body']);
+  getOrCreate(ss, 'journal').appendRow(['id', 'date', 'title', 'body', 'imageData']);
   getOrCreate(ss, 'events');
   Logger.log('Setup complete!');
 }
