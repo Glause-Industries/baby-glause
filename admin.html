@@ -1435,26 +1435,7 @@ function jsonResponse(data) {
       welcomeText: 'Welcome to our little corner of the internet. A place to follow along as our family grows.',
       weeklyNote: '',
       eventsRaw: '',
-      entries: [
-        {
-          id: uid(),
-          date: 'April 8, 2026',
-          title: 'Looking Ahead',
-          body: "We have our first appointment coming up soon. It still doesn't feel entirely real yet, but every day it sinks in a little more. We're starting to think about all the small things — what the nursery might look like someday, how our routines will shift. For now, we're just taking it one day at a time and soaking in the quiet before everything changes."
-        },
-        {
-          id: uid(),
-          date: 'April 2, 2026',
-          title: 'The Early Days',
-          body: "It's been about a week since we found out. The feelings come in waves — excitement, nervousness, wonder. We're being gentle with ourselves and trying not to overthink every little thing. It's strange how life looks exactly the same from the outside but feels completely different on the inside."
-        },
-        {
-          id: uid(),
-          date: 'March 27, 2026',
-          title: 'We Found Out',
-          body: "This is the one we'll probably tell this story a hundred times. We found out today. Two lines on a test, a long pause, and then the kind of quiet happiness that doesn't need words. We're keeping things close for now — just the two of us holding onto this little secret."
-        }
-      ]
+      entries: []
     };
 
     let unsaved = false;
@@ -2030,8 +2011,24 @@ function jsonResponse(data) {
 
     /* ════════ INIT ════════ */
 
-    function initEditor() {
-      loadDraft();
+    async function initEditor() {
+      // Always load live data from Sheets first so we never overwrite real entries
+      setStatus('saving', 'Loading…');
+      try {
+        const res = await fetch(HARDCODED_API_URL + '?action=read');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ok) {
+            if (data.config && data.config.welcomeText) state.welcomeText = data.config.welcomeText;
+            if (data.eventsRaw) state.eventsRaw = data.eventsRaw;
+            if (data.journal && data.journal.length) {
+              state.entries = data.journal.map(e => ({ ...e, id: e.id || uid() }));
+            }
+          }
+        }
+      } catch(e) {
+        console.warn('Could not load from Sheets on init:', e);
+      }
       initNav();
       initSettings();
       initJournal();
