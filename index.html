@@ -420,13 +420,16 @@
        ═══════════════════════════════════════════════════ */
 
     function getPregnancyInfo() {
-      const today = new Date(); today.setHours(0,0,0,0);
-      const due = new Date(DUE_DATE); due.setHours(0,0,0,0);
-      const LMP = new Date(due); LMP.setDate(LMP.getDate() - 280);
-      const totalDays = Math.floor((today - LMP) / 86400000);
+      // Use UTC noon to avoid DST boundary issues eating a day
+      const now = new Date();
+      const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+      const dueRaw = new Date(DUE_DATE);
+      const dueUTC  = Date.UTC(dueRaw.getFullYear(), dueRaw.getMonth(), dueRaw.getDate(), 12, 0, 0);
+      const lmpUTC  = dueUTC - 280 * 86400000;
+      const totalDays = Math.round((todayUTC - lmpUTC) / 86400000);
       const weeks = Math.floor(totalDays / 7);
       const days = totalDays % 7;
-      const daysRemaining = Math.ceil((due - today) / 86400000);
+      const daysRemaining = Math.round((dueUTC - todayUTC) / 86400000);
       let trimester = weeks < 13 ? 'First' : weeks < 27 ? 'Second' : 'Third';
       let trimesterNum = weeks < 13 ? 1 : weeks < 27 ? 2 : 3;
       let trimesterProgress = trimesterNum === 1 ? Math.min((weeks/13)*100,100) : trimesterNum === 2 ? Math.min(((weeks-13)/14)*100,100) : Math.min(((weeks-27)/13)*100,100);
