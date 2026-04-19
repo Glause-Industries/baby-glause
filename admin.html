@@ -1966,11 +1966,11 @@ function jsonResponse(data) {
       };
       const eventsRaw = document.getElementById('eventsRaw').value;
 
-      const post = async (body) => {
+      const post = async (action, payload) => {
         const params = new URLSearchParams({
-          action: body.action,
-          pass: body.password,
-          payload: JSON.stringify(body)
+          action: action,
+          pass: ADMIN_PASSWORD,
+          payload: JSON.stringify(payload)
         });
         const res = await fetch(url + '?' + params.toString());
         const data = await res.json();
@@ -1978,9 +1978,9 @@ function jsonResponse(data) {
       };
 
       try {
-        await post({ action: 'saveConfig', password: ADMIN_PASSWORD, config });
-        await post({ action: 'saveJournal', password: ADMIN_PASSWORD, entries });
-        await post({ action: 'saveEvents', password: ADMIN_PASSWORD, raw: eventsRaw });
+        await post('saveConfig',  { config });
+        await post('saveJournal', { entries });
+        await post('saveEvents',  { raw: eventsRaw });
 
         unsaved = false;
         setStatus('saved', 'Saved ✓');
