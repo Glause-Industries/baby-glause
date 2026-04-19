@@ -124,19 +124,10 @@
     .event-badge { display:inline-flex; align-items:center; gap:var(--space-1); font-size:.7rem; font-weight:500; color:var(--color-gold); background:var(--color-gold-glow); padding:3px 10px; border-radius:var(--radius-full); margin-top:var(--space-2); letter-spacing:.04em; }
     .event-badge svg { width:12px; height:12px; }
 
-    /* TIMELINE */
-    .timeline { position:relative; padding-left:var(--space-8); }
-    .timeline::before { content:''; position:absolute; left:7px; top:8px; bottom:8px; width:2px; background:linear-gradient(180deg,var(--color-rose-muted),var(--color-border-subtle)); border-radius:1px; }
-    .timeline-item { position:relative; padding-bottom:var(--space-6); }
-    .timeline-item:last-child { padding-bottom:0; }
-    .timeline-dot { position:absolute; left:calc(-1 * var(--space-8) + 2px); top:6px; width:12px; height:12px; border-radius:var(--radius-full); background:var(--color-border-subtle); border:2px solid var(--color-bg); z-index:1; }
-    .timeline-item--active .timeline-dot { background:var(--color-rose); box-shadow:0 0 10px rgba(196,135,122,.4); }
-    .timeline-item--completed .timeline-dot { background:var(--color-gold-muted); }
-    .timeline-week { font-size:var(--text-xs); color:var(--color-text-muted); margin-bottom:var(--space-1); }
-    .timeline-title { font-family:var(--font-display); font-size:var(--text-base); font-weight:500; color:var(--color-text); line-height:1.3; }
-    .timeline-item--active .timeline-title { color:var(--color-rose); }
-    .timeline-item--future .timeline-title { color:var(--color-text-muted); }
-    .timeline-desc { font-size:var(--text-xs); color:var(--color-text-muted); margin-top:var(--space-1); line-height:1.5; }
+    /* DEV IMAGE */
+    .brief-dev-image { margin-top: var(--space-6); margin-bottom: var(--space-6); text-align: center; }
+    .brief-dev-image img { width: 100%; max-width: 320px; border-radius: var(--radius-xl); border: 1px solid var(--color-border-subtle); box-shadow: 0 4px 32px rgba(196,135,122,.10), var(--shadow-card); display: block; margin: 0 auto; }
+    .brief-dev-image-caption { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-2); letter-spacing: .04em; }
 
     /* JOURNAL */
     .journal-entries { display:flex; flex-direction:column; gap:var(--space-6); }
@@ -236,6 +227,10 @@
           <h4>What's Developing</h4>
           <p id="briefDeveloping">--</p>
         </div>
+        <div class="brief-dev-image" id="devImageContainer">
+          <img id="devImage" src="" alt="Baby development illustration" loading="lazy">
+          <div class="brief-dev-image-caption" id="devImageCaption">Week -- development</div>
+        </div>
         <div class="brief-trimester-bar">
           <span class="trimester-label" id="trimesterLabel">First Trimester</span>
           <div class="trimester-track"><div class="trimester-fill" id="trimesterFill" style="width:0%"></div></div>
@@ -253,15 +248,6 @@
       <div class="events-list" id="eventsList">
         <div class="loading-state"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></div>
       </div>
-    </div>
-  </section>
-
-  <!-- ═══════ MILESTONE TIMELINE ═══════ -->
-  <section id="milestones">
-    <div class="container">
-      <div class="section-label">Pregnancy Journey</div>
-      <h2 class="section-title">Milestone Timeline</h2>
-      <div class="timeline" id="timelineContainer"></div>
     </div>
   </section>
 
@@ -306,18 +292,19 @@
 
     const FALLBACK_WELCOME = 'Welcome to our little corner of the internet. A place to follow along as our family grows.';
 
-    // ── Static milestone data ──
-    const MILESTONES = [
-      { week:4,  title:'Confirmation', desc:'Pregnancy confirmed' },
-      { week:8,  title:'First Prenatal Visit', desc:'Initial checkup and bloodwork' },
-      { week:10, title:'Early Ultrasound Window', desc:'First glimpse of the baby' },
-      { week:13, title:'End of First Trimester', desc:'A meaningful milestone' },
-      { week:20, title:'Anatomy Scan', desc:'Detailed ultrasound' },
-      { week:26, title:'Glucose Screening', desc:'Routine glucose test' },
-      { week:28, title:'Third Trimester Begins', desc:'The home stretch' },
-      { week:37, title:'Full Term', desc:'Baby is considered full term' },
-      { week:40, title:'Due Date', desc:'December 11, 2026' }
-    ];
+    // ── Week development image map ──
+    const DEV_IMAGES = {
+      4:  'dev-images/week-4.png',
+      5:  'dev-images/week-5.png',
+      6:  'dev-images/week-6.png',
+      7:  'dev-images/week-7.png',
+      8:  'dev-images/week-8.png',
+      9:  'dev-images/week-9.png',
+      10: 'dev-images/week-10.png',
+      11: 'dev-images/week-11.png',
+      12: 'dev-images/week-12.png',
+      13: 'dev-images/week-13.png',
+    };
 
     const SIZE_DATA = {
       4:  { name:'A poppy seed',     emoji:'🌸', desc:"Barely visible, but already beginning an incredible journey" },
@@ -391,6 +378,19 @@
       document.getElementById('trimesterLabel').textContent = `${info.trimester} Trimester`;
       document.getElementById('trimesterFill').style.width = `${info.trimesterProgress}%`;
       document.getElementById('trimesterWeek').textContent = `Week ${info.weeks}`;
+
+      // Development image
+      const w = Math.max(4, Math.min(13, info.weeks));
+      const imgSrc = DEV_IMAGES[w];
+      const imgEl = document.getElementById('devImage');
+      const capEl = document.getElementById('devImageCaption');
+      if (imgSrc) {
+        imgEl.src = imgSrc;
+        imgEl.alt = `Baby at week ${w} of development`;
+        capEl.textContent = `Week ${w} · baby development`;
+      } else {
+        document.getElementById('devImageContainer').style.display = 'none';
+      }
     }
 
     function escapeHtml(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
@@ -441,17 +441,6 @@
       return events;
     }
 
-    function renderTimeline(info) {
-      const container = document.getElementById('timelineContainer');
-      container.innerHTML = MILESTONES.map(ms => {
-        let state = '';
-        if (info.weeks >= ms.week+2) state = 'timeline-item--completed';
-        else if (info.weeks >= ms.week-1 && info.weeks <= ms.week+1) state = 'timeline-item--active';
-        else if (info.weeks < ms.week-1) state = 'timeline-item--future';
-        return `<div class="timeline-item ${state}"><div class="timeline-dot"></div><div class="timeline-week">Week ${ms.week}</div><div class="timeline-title">${escapeHtml(ms.title)}</div><div class="timeline-desc">${escapeHtml(ms.desc)}</div></div>`;
-      }).join('');
-    }
-
     function renderJournal(entries) {
       const container = document.getElementById('journalEntries');
       if (!entries || !entries.length) {
@@ -480,7 +469,6 @@
       const info = getPregnancyInfo();
       updateHero(info, FALLBACK_WELCOME);
       updateBrief(info);
-      renderTimeline(info);
 
       if (SHEETS_API_URL) {
         try {
