@@ -1695,18 +1695,31 @@ function jsonResponse(data) {
           const id = input.dataset.id;
           const file = input.files[0];
           if (!file) return;
-          // Warn if file is very large (>3MB)
-          if (file.size > 3 * 1024 * 1024) {
-            alert('That image is quite large. For best performance, use a photo under 3 MB.');
-          }
+
+          // Compress image client-side before storing
+          // Resizes to max 1200px and converts to JPEG 72% — keeps payload ~150KB
           const reader = new FileReader();
           reader.onload = (ev) => {
-            const entry = state.entries.find(e => e.id === id);
-            if (entry) {
-              entry.imageData = ev.target.result; // base64 data URL
-              renderJournalCards();
-              markUnsaved();
-            }
+            const img = new window.Image();
+            img.onload = () => {
+              const MAX = 1200;
+              let w = img.width, h = img.height;
+              if (w > MAX || h > MAX) {
+                if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                else       { w = Math.round(w * MAX / h); h = MAX; }
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = w; canvas.height = h;
+              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+              const compressed = canvas.toDataURL('image/jpeg', 0.72);
+              const entry = state.entries.find(e => e.id === id);
+              if (entry) {
+                entry.imageData = compressed;
+                renderJournalCards();
+                markUnsaved();
+              }
+            };
+            img.src = ev.target.result;
           };
           reader.readAsDataURL(file);
         });
@@ -2068,23 +2081,34 @@ function jsonResponse(data) {
         return url + '?' + params.toString();
       };
 
-      // Use an image ping — works cross-origin, no CORS, no preflight
-      // Google Apps Script returns JSON which the image fails to load,
-      // but the request still reaches the server and executes
+      // Small payloads (config, events) use image-ping GET — no CORS preflight
+      // Journal (may contain large Base64 images) uses POST fetch
       const ping = (action, payload) => new Promise((resolve) => {
         const img = new Image();
         const reqUrl = buildUrl(action, payload);
         img.onload = () => resolve(true);
-        img.onerror = () => resolve(true); // error just means non-image response — that's fine
+        img.onerror = () => resolve(true);
         img.src = reqUrl;
-        // Resolve after 8 seconds max regardless
         setTimeout(() => resolve(true), 8000);
       });
+
+      // POST sender for journal — handles large Base64 image payloads
+      const postSave = async (action, payload) => {
+        try {
+          await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' }, // text/plain avoids CORS preflight
+            body: JSON.stringify({ action, pass: ADMIN_PASSWORD, ...payload })
+          });
+        } catch (err) {
+          console.warn('POST save error (may still have saved):', err);
+        }
+      };
 
       try {
         // Send sequentially so Sheet writes don't race
         await ping('saveConfig',  { config });
-        await ping('saveJournal', { entries });
+        await postSave('saveJournal', { entries });
         await ping('saveEvents',  { raw: eventsRaw });
 
         unsaved = false;
