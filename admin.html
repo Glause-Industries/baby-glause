@@ -2120,23 +2120,10 @@ function jsonResponse(data) {
         setTimeout(() => resolve(true), 8000);
       });
 
-      // POST sender for journal — handles large Base64 image payloads
-      const postSave = async (action, payload) => {
-        try {
-          await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' }, // text/plain avoids CORS preflight
-            body: JSON.stringify({ action, pass: ADMIN_PASSWORD, ...payload })
-          });
-        } catch (err) {
-          console.warn('POST save error (may still have saved):', err);
-        }
-      };
-
       try {
-        // Send sequentially so Sheet writes don't race
+        // All saves use image-ping GET — imageData is now a short Drive URL, not Base64
         await ping('saveConfig',  { config });
-        await postSave('saveJournal', { entries });
+        await ping('saveJournal', { entries });
         await ping('saveEvents',  { raw: eventsRaw });
 
         unsaved = false;
