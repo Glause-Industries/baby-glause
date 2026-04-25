@@ -57,6 +57,7 @@ function doPost(e) {
   if (action === 'saveJournal')  return jsonResponse(saveJournal(body.entries));
   if (action === 'saveEvents')   return jsonResponse(saveEvents(body.raw));
   if (action === 'saveConfig')   return jsonResponse(saveConfig(body.config));
+  if (action === 'uploadImage')  return jsonResponse(uploadImage(body.imageData, body.filename));
 
   return jsonResponse({ error: 'Unknown action' });
 }
@@ -113,6 +114,40 @@ function saveJournal(entries) {
     sheet.appendRow([e.id || (i + 1), e.date, e.title, e.body, e.imageData || '']);
   });
   return { ok: true };
+}
+
+// ─────────────────────────────────────────
+// UPLOAD IMAGE TO DRIVE
+// ─────────────────────────────────────────
+
+function uploadImage(dataUrl, filename) {
+  try {
+    // Parse the data URL: data:image/jpeg;base64,/9j/...
+    const match = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (!match) return { error: 'Invalid image data' };
+    const mimeType = match[1];
+    const base64   = match[2];
+    const blob     = Utilities.newBlob(Utilities.base64Decode(base64), mimeType, filename || 'ultrasound.jpg');
+
+    // Save to a Baby Glause folder in Drive
+    let folder;
+    const folders = DriveApp.getFoldersByName('Baby Glause Images');
+    if (folders.hasNext()) {
+      folder = folders.next();
+    } else {
+      folder = DriveApp.createFolder('Baby Glause Images');
+    }
+
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    // Return a direct image URL (works for <img> tags)
+    const fileId = file.getId();
+    const url = 'https://lh3.googleusercontent.com/d/' + fileId;
+    return { ok: true, url, fileId };
+  } catch(err) {
+    return { error: err.toString() };
+  }
 }
 
 // ─────────────────────────────────────────

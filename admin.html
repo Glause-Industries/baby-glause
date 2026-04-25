@@ -1696,30 +1696,58 @@ function jsonResponse(data) {
           const file = input.files[0];
           if (!file) return;
 
-          // Compress image client-side before storing
-          // Resizes to max 1200px and converts to JPEG 72% — keeps payload ~150KB
+          // Show uploading state on the card
+          const uploadWrap = input.closest('.journal-image-upload');
+          if (uploadWrap) {
+            uploadWrap.innerHTML = '<span style="font-size:11px;color:var(--color-rose-muted)">Uploading image…</span>';
+          }
+
+          // Compress client-side first (max 1200px, JPEG 75%)
           const reader = new FileReader();
           reader.onload = (ev) => {
-            const img = new window.Image();
-            img.onload = () => {
+            const imgEl = new window.Image();
+            imgEl.onload = async () => {
               const MAX = 1200;
-              let w = img.width, h = img.height;
+              let w = imgEl.width, h = imgEl.height;
               if (w > MAX || h > MAX) {
                 if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
                 else       { w = Math.round(w * MAX / h); h = MAX; }
               }
               const canvas = document.createElement('canvas');
               canvas.width = w; canvas.height = h;
-              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-              const compressed = canvas.toDataURL('image/jpeg', 0.72);
-              const entry = state.entries.find(e => e.id === id);
-              if (entry) {
-                entry.imageData = compressed;
+              canvas.getContext('2d').drawImage(imgEl, 0, 0, w, h);
+              const compressed = canvas.toDataURL('image/jpeg', 0.75);
+
+              // Upload to Google Drive via Apps Script POST
+              try {
+                const resp = await fetch(HARDCODED_API_URL, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'text/plain' },
+                  body: JSON.stringify({
+                    action: 'uploadImage',
+                    pass: ADMIN_PASSWORD,
+                    imageData: compressed,
+                    filename: 'ultrasound-' + Date.now() + '.jpg'
+                  })
+                });
+                const json = await resp.json();
+                if (json.ok && json.url) {
+                  const entry = state.entries.find(e => e.id === id);
+                  if (entry) {
+                    entry.imageData = json.url; // Store Drive URL, not Base64
+                    renderJournalCards();
+                    markUnsaved();
+                  }
+                } else {
+                  alert('Image upload failed: ' + (json.error || 'unknown error'));
+                  renderJournalCards(); // restore the upload button
+                }
+              } catch (err) {
+                alert('Image upload failed. Check your internet connection.');
                 renderJournalCards();
-                markUnsaved();
               }
             };
-            img.src = ev.target.result;
+            imgEl.src = ev.target.result;
           };
           reader.readAsDataURL(file);
         });
